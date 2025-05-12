@@ -228,6 +228,23 @@ function Key({ ownedKey, owner, network }: Props) {
     }
   }, [])
 
+  const provider = web3Service.providerForNetwork(network)
+  const [contractImage, setContractImage] = useState<string | null>(null)
+
+  // Fetch the contract's metadata image using tokenUri
+  const { data: keyMetadata, isPending: isKeyMetadataPending } = useQuery({
+    queryKey: ['keyMetadata', lock.address, tokenId, network],
+    queryFn: async () => {
+      const tokenUri = await provider.getTokenURI(lock.address, tokenId)
+      const response = await fetch(tokenUri)
+      const metadata = await response.json()
+      return metadata
+    },
+    onSuccess: (data) => {
+      setContractImage(data.image)
+    },
+  })
+
   return (
     <Card className="grid gap-6" shadow="lg" padding="xs">
       <KeyInfoDrawer
@@ -238,7 +255,7 @@ function Key({ ownedKey, owner, network }: Props) {
         tokenId={tokenId}
         network={network}
         expiration={expiration}
-        imageURL={metadata.image}
+        imageURL={contractImage || metadata.image}
       />
       <CancelAndRefundModal
         isOpen={showCancelModal}
@@ -499,9 +516,9 @@ function Key({ ownedKey, owner, network }: Props) {
           className="flex items-center justify-center cursor-pointer hover:bg-gray-50"
         >
           <AvatarImage
-            className="w-full h-full rounded-xl aspect-1 max-h-72 max-w-72 object-contain	"
+            className="w-full h-full rounded-xl aspect-1 max-h-72 max-w-72 object-contain"
             alt={lock.name!}
-            src={metadata.image}
+            src={contractImage || metadata.image}
             width={250}
             height={250}
             onLoadingStatusChange={onLoadingStatusChangeOfImage}
@@ -515,7 +532,7 @@ function Key({ ownedKey, owner, network }: Props) {
               className="w-full h-full rounded-xl aspect-1 max-h-72 max-w-72"
               muted
               playsInline
-              src={metadata.image}
+              src={contractImage || metadata.image}
               ref={videoRef}
               style={{ display: canPlayImageAsVideo ? 'block' : 'none' }}
             />
